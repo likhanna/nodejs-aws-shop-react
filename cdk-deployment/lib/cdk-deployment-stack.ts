@@ -3,6 +3,7 @@ import { Construct } from 'constructs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 import * as cf from "aws-cdk-lib/aws-cloudfront";
+import * as iam from "aws-cdk-lib/aws-iam";
 
 import { bucketName } from '../constants';
 
@@ -15,13 +16,8 @@ export class CdkDeploymentStack extends cdk.Stack {
         websiteIndexDocument: 'index.html',
         removalPolicy: cdk.RemovalPolicy.DESTROY,
         autoDeleteObjects: true,
-        publicReadAccess: true,
-        blockPublicAccess: {
-          blockPublicAcls: false,
-          blockPublicPolicy: false,
-          ignorePublicAcls: false,
-          restrictPublicBuckets: false,
-        },
+        publicReadAccess: false,
+        blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       });
 
       const originAccessIdentity = new cf.OriginAccessIdentity(
@@ -31,7 +27,12 @@ export class CdkDeploymentStack extends cdk.Stack {
           comment: websiteBucket.bucketName,
         }
       );
-      websiteBucket.grantRead(originAccessIdentity);
+
+      websiteBucket.addToResourcePolicy(new iam.PolicyStatement({
+        actions:["S3:GetObject"],
+        resources:[websiteBucket.arnForObjects("*")],
+        principals:[new iam.CanonicalUserPrincipal(originAccessIdentity.cloudFrontOriginAccessIdentityS3CanonicalUserId)]
+      }))
 
       const cloudfront = new cf.CloudFrontWebDistribution(
         this,
@@ -41,6 +42,7 @@ export class CdkDeploymentStack extends cdk.Stack {
             {
               s3OriginSource: {
                 s3BucketSource: websiteBucket,
+                originAccessIdentity: originAccessIdentity
               },
               behaviors: [{ isDefaultBehavior: true }],
             },

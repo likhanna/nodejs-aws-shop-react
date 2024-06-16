@@ -1,1 +1,1 @@
-export { account, bucketName, region } from "./aws"
+export { bucketName, region } from "./aws";

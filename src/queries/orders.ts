@@ -46,7 +46,7 @@ export function useSubmitOrder() {
       comments: values.address.comment,
     };
     return axios.post<Omit<Order, "id">>(
-      `${API_PATHS.order}/profile/cart/checkout`,
+      `${API_PATHS.bff}/cart/checkout`,
       body,
       {
         headers: {
